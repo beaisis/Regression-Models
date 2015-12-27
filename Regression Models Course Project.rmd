@@ -1,0 +1,101 @@
+---
+title: "Regression Models - Course Project"
+author: "Brian Altman"
+date: "December 25, 2015"
+output: pdf_document
+---
+
+###**Executive Summary**
+Based on data from 1974 Motor Trend US magazine (mtcars in R), the following was investigated:
+
+* Is an automatic or manual transmission better for MPG?
+* Quantify the MPG difference between automatic and manual transmissions.
+
+Initially, this study showed manual transmissions on average have 7.3 MPG better performance than automated transmission cars (24.392 MPG vs 17.147 MPG). With further analysis, cylinders(cyl), horsepower(hp) and weight(wt) together had impact on MPG and manuals instead added just 1.8 MPG over automatic transmissions. 
+
+
+```{r Libraries, echo=FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+#### **Initial exploratory analysis**
+The following visualizes weight, cylinders and mpg relationship. See the Appendix for addditional analysis.
+
+```{r Explaratory, echo=FALSE,fig.width=8, fig.height=3,warning=FALSE,}
+data(mtcars)
+
+mtcars$cyl   <- factor(mtcars$cyl)
+mtcars$vs    <- factor(mtcars$vs)
+mtcars$gear  <- factor(mtcars$gear)
+mtcars$carb  <- factor(mtcars$carb)
+mtcars$am    <- factor(mtcars$am,labels=c("Auto","Manual"))
+
+ggplot(mtcars, aes(x=mpg, y=wt, group=am, color=am, height=3, width=3)) + geom_point() +  
+      scale_colour_discrete(labels=c("Automatic", "Manual")) + facet_grid(. ~ cyl) + ylab("Weight") +
+      xlab("MPG") + ggtitle(expression(paste("Scatter Plot of MPG By Cylinders for Weight and Transmission\n")))
+```
+
+#### **Inference** 
+Null hypothesis: No MPG difference for automatic and manual transmissions. Using the following t-test:
+```{r T-test, results='hide'}
+model.AM <-t.test(mpg ~ am, data=mtcars) #See Appendix
+```
+The P-value of 0.00137 suggests automatic and manual transmissions are of different populations.  Manual Avg MPG is 24.39 while Automated is 17.147, a difference of 7.245 MPG.
+
+#### **Regression Analysis**
+A model using the full set of variables was developed. The full model:
+
+```{r Full Model}
+model.full <- lm(mpg ~ ., data=mtcars) #See Appendix
+```
+Nearly 78% of the MPG variance can be explained by all the 10 variables. Using the Full Model, the STEP function was used to help determine the most significant variables.
+```{r Step, echo=FALSE, results='hide'}
+model.step <- step(model.full, direction = "both")
+```
+```{r StepSummary, echo=TRUE, results='hide'}
+summary(model.step)  #See Appendix
+```
+
+The p-value indicates the variables cyl(6,8), hp and wt in contribute to the accuracy of the model and, with AM,  help explain approximately 84% of the variability. Manual transmission achieve 1.8 more MPG compared to Automatic transmission cars when adjusting for hp, cyl, and wt. The final model:
+
+```{r Best, results='hide'}
+model.final <- lm(mpg ~ am + cyl + wt + hp, data=mtcars) #See Appendix
+```
+
+#### **Model Residuals and Diagnostics**
+Residuals and other diagnostics were used to identify potential Final model problems.  The top 3 observations were determined and reviewed for leverage and outliers.  Please see Appendix also
+
+```{r resid, echo=FALSE}
+par(mfrow=c(2, 2))
+plot(model.final)
+```
+
+### **Conclusions**
+No patterns in residual plots, leverage and outliers suggested that there were additional, significant predictors of Fuel consumption.  The QQ-plot vaidates the normality of the final model.
+
+Manual transmission cars achieve 1.8 better MPG when adjusting for hp, cyl, and wt.
+
+***
+***
+##**Appendix**
+```{r Appendix, fig.width=8, fig.height=5}
+dim(mtcars)
+
+leverage <- hatvalues(model.final)
+tail(sort(leverage),3)
+
+influential <- dfbetas(model.final)
+tail(sort(influential[,6]),3)
+
+boxplot(mpg ~ am, data = mtcars, col = (c("green","blue")), ylab = "Mpg", xlab = "Trans")
+
+pairs(mtcars, panel=panel.smooth, main="Pair Graphs")
+
+summary(model.full)
+
+summary(model.final)
+
+
+```
+
